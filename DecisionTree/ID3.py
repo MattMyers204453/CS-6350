@@ -1,3 +1,4 @@
+import re
 from sys import displayhook
 import pandas as p
 import math
@@ -8,8 +9,6 @@ def getp(df, label_value):
         return 0
     numerator = sum(df["label"] == label_value)
     return (numerator / float(total))
-
-
 
 def get_entropy_of_dataset(df, labels):
     sum = 0.0
@@ -62,7 +61,7 @@ def find_highest_IG(df, attributes, labels, attribute_values):
     for i in range(len(attributes) - 1):
         IG = get_IG(gini_of_set, df, attributes[i], attribute_values, labels)
         IG_for_each_value[attributes[i]] = IG
-        print(attributes[i], " ",str(IG))
+        #print(attributes[i], " ",str(IG))
     best_feature = max(IG_for_each_value, key=IG_for_each_value.get)
     return best_feature
 
@@ -80,7 +79,7 @@ def ID3(df, attributes, attribute_values, labels, most_common_label):
     #gini_of_dataset = get_GI_of_dataset(df, labels)
     #if (gini_of_dataset == 0):
         #return 0
-    if (len(attributes) == 0):
+    if (len(attributes) == 1):
         return Node(False, None, True, most_common_label)
     for label in labels:
         if sum(df["label"] == label) == len(df.index):
@@ -105,9 +104,15 @@ def ID3(df, attributes, attribute_values, labels, most_common_label):
         i += 1
     return root
 
-        
+def traverse_tree(i, df, root, attribute_values):
+    while root.isLeafNode == False:
+        feature = root.feature
+        item_value = df.at[i, feature]
+        index = attribute_values[feature].index(item_value)
+        root = root.children[index]
+    return root.label
 
-#with open ('data-desc copy.txt') as file:
+
 with open ('data-desc.txt') as file:
     lines = file.readlines()
 file.close()
@@ -116,7 +121,6 @@ attributes_as_csv_string = lines[14]
 
 labels = labels_as_csv_string.strip().split(", ")
 attributes = attributes_as_csv_string.strip().split(",")
-#print(attributes)
 
 attribute_values = {}
 
@@ -125,39 +129,46 @@ for i in range(len(attributes)):
     substring = uncut_line[9:]
     attribute_values[attributes[i]] = substring.strip()[:-1].split(", ")
 
-##print(labels)
-##print(attributes)
-##print(attribute_values)
-
-
-
 
 dict = {}
 for i in range(len(attributes)):
     dict[attributes[i]] = []
-#with open("test copy.csv") as file:
 count = 0
-with open("test.csv") as file:
+with open("train.csv") as file:
     for line in file:
-        if count > 20:
+        if count > 1000:
             break
         terms = line.strip().split(",")
         for i in range(len(attributes)):
             dict[attributes[i]].append(terms[i]) #= terms[i]
         count += 1
 
+test_dict = {}
+for i in range(len(attributes)):
+    test_dict[attributes[i]] = []
+count = 0
+with open("test.csv") as file:
+    for line in file:
+        if count > 1000:
+            break
+        terms = line.strip().split(",")
+        for i in range(len(attributes)):
+            test_dict[attributes[i]].append(terms[i]) #= terms[i]
+        count += 1
+
 
 df = p.DataFrame(dict)
-#print(dict)
-displayhook(df)
-#print(sum(df["label"] == "unacc"))
-#print(len(df.index))
-#print(getp(df, "unacc"))
-#print(get_entropy_of_dataset(df, labels))
-#print(get_entropy_of_feature(df,))
-#get_GI_of_feature_at_specific_value(df, "outlook", "rainy", labels)
-#IG_of_set = get_GI_of_dataset(df, labels)
-#print(get_IG(IG_of_set, df, "outlook", attribute_values, labels))
-#best_feature = find_highest_IG(df, attributes, labels, attribute_values)
-#print(best_feature)
-print(ID3(df, attributes, attribute_values, labels, "unacc").feature)
+test_df = p.DataFrame(test_dict)
+#displayhook(df)
+#displayhook(test_df)
+most_common = df["label"].mode()[0]
+root = ID3(df, attributes, attribute_values, labels, most_common)
+error_count = 0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[[i]]
+    actual_label = item_value = row.at[i, "label"]
+    result_label = traverse_tree(i, row, root, attribute_values)
+    if (actual_label != result_label):
+        error_count += 1
+    print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))
+print(error_count)
