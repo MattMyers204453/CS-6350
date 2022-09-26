@@ -81,19 +81,29 @@ def ID3(df, attributes, attribute_values, labels, most_common_label):
     #if (gini_of_dataset == 0):
         #return 0
     if (len(attributes) == 0):
-        return most_common_label
+        return Node(False, None, True, most_common_label)
     for label in labels:
         if sum(df["label"] == label) == len(df.index):
             return Node(False, None, True, label)
-    root = Node()
     feature_with_highest_IG = find_highest_IG(df, attributes, labels, attribute_values)
+    root = Node(True, feature_with_highest_IG, False, None)
     i = 0
     for value in attribute_values[feature_with_highest_IG]:
-        root.children[i] = Node()
+        #root.children[i] = Node()
         subset = df.loc[(df[feature_with_highest_IG] == value)]
         if (len(subset.index) == 0):
-            most_common_label_in_df = df["label"].mode()
+            most_common_label_in_df = df["label"].mode()[0]
+            leaf = Node(False, None, True, most_common_label_in_df)
+            root.children[i] = leaf
+        else:
+            subAttributes = attributes[:]
+            subAttributes.remove(feature_with_highest_IG)
+            subAttribute_values = attribute_values.copy()
+            del subAttribute_values[feature_with_highest_IG]
+            subtree = ID3(subset, subAttributes, subAttribute_values, labels, most_common_label)
+            root.children[i] = subtree
         i += 1
+    return root
 
         
 
@@ -129,7 +139,7 @@ for i in range(len(attributes)):
 count = 0
 with open("test.csv") as file:
     for line in file:
-        if count > 5:
+        if count > 20:
             break
         terms = line.strip().split(",")
         for i in range(len(attributes)):
@@ -150,8 +160,4 @@ displayhook(df)
 #print(get_IG(IG_of_set, df, "outlook", attribute_values, labels))
 #best_feature = find_highest_IG(df, attributes, labels, attribute_values)
 #print(best_feature)
-#print(ID3(df, attributes, attribute_values, labels, "unacc").label)
-subset = df.loc[(df["label"] == "acc")]
-if (len(subset.index) == 0):
-    most_common_label_in_df = df["label"].mode()
-    print(most_common_label_in_df)
+print(ID3(df, attributes, attribute_values, labels, "unacc").feature)
