@@ -1,5 +1,4 @@
-import re
-from sys import displayhook
+#from sys import displayhook
 import pandas as p
 import math
 
@@ -165,4 +164,4 @@ for i in range(len(test_df.index)):
     if (actual_label != result_label):
         error_count += 1
     print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))
-print(error_count)
+print("Total Errors: ", str(error_count))
