@@ -15,7 +15,7 @@ def get_entropy_of_dataset(df, labels):
     for label in labels:
         prob_i = getp(df, label)
         if prob_i != 0:
-            sum += (prob_i * math.log(prob_i, 2))
+            sum += (prob_i * math.log(prob_i, len(labels)))
     return sum * -1
 
 def get_GI_of_dataset(df, labels):
@@ -44,9 +44,7 @@ def get_IG(GI_of_set, df, feature, attribute_values, labels):
     gini_for_each_value = {}
     for value in attribute_values[feature]:
         GI = get_GI_of_feature_at_specific_value(df, feature, value, labels)
-        #print("GI", str(GI))
         gini_for_each_value[value] = GI
-    #max_value = max(gini_for_each_value, key=gini_for_each_value.get)
     length_of_whole_set = len(df.index)
     sigma = 0.0
     for value, GI in gini_for_each_value.items():
@@ -61,7 +59,6 @@ def find_highest_IG(df, attributes, labels, attribute_values):
     for i in range(len(attributes) - 1):
         IG = get_IG(gini_of_set, df, attributes[i], attribute_values, labels)
         IG_for_each_value[attributes[i]] = IG
-        #print(attributes[i], " ",str(IG))
     best_feature = max(IG_for_each_value, key=IG_for_each_value.get)
     return best_feature
 
@@ -76,9 +73,6 @@ class Node:
         self.label = label
 
 def ID3(df, attributes, attribute_values, labels, most_common_label):
-    #gini_of_dataset = get_GI_of_dataset(df, labels)
-    #if (gini_of_dataset == 0):
-        #return 0
     if (len(attributes) == 1):
         return Node(False, None, True, most_common_label)
     for label in labels:
