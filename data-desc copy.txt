@@ -1,0 +1,15 @@
+| label values
+
+plus, minus
+
+| attributes
+
+outlook:  sunny, overcast, rainy.
+temp:     hot, medium, cool.
+humid:    high, normal, low.
+wind:     strong, weak.
+
+
+
+| columns
+outlook,temp,humid,wind,label

@@ -1,6 +1,6 @@
 vhigh,high,5more,2,small,low,unacc
 low,low,5more,2,small,med,unacc
-med,vhigh,4,2,med,low,good
+low,vhigh,4,2,med,low,unacc
 high,vhigh,3,4,med,med,unacc
 vhigh,low,4,4,med,low,unacc
 high,vhigh,5more,4,med,low,unacc
