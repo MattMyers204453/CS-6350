@@ -147,3 +147,4 @@ for i in range(len(test_df.index)):
         error_count += 1
     #print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))
 print("Total Errors: ", str(error_count))
+print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
