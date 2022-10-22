@@ -72,5 +72,5 @@ label_binary = {'no': -1, 'yes': 1}
 df["default"] = df["default"].map(binary).astype(int)
 df["loan"] = df["loan"].map(binary).astype(int)
 df["housing"] = df["housing"].map(binary).astype(int)
-df["y"] = df["y"].map(binary).astype(int)
+df["y"] = df["y"].map(label_binary).astype(int)
 sys.displayhook(df)
