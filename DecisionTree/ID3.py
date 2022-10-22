@@ -1,6 +1,10 @@
 #from sys import displayhook
+import sys
 import pandas as p
 import math
+import read_data as read
+import os
+
 
 def getp(df, label_value):
     total = len(df.index) 
@@ -106,7 +110,7 @@ def traverse_tree(i, df, root, attribute_values):
     return root.label
 
 
-with open ('data-desc.txt') as file:
+with open (os.path.join(sys.path[0], "data-desc.txt")) as file:
     lines = file.readlines()
 file.close()
 labels_as_csv_string = lines[2]
@@ -123,39 +127,17 @@ for i in range(len(attributes)):
     attribute_values[attributes[i]] = substring.strip()[:-1].split(", ")
 
 
-dict = {}
-for i in range(len(attributes)):
-    dict[attributes[i]] = []
-count = 0
-with open("train.csv") as file:
-    for line in file:
-        if count > 1000:
-            break
-        terms = line.strip().split(",")
-        for i in range(len(attributes)):
-            dict[attributes[i]].append(terms[i]) #= terms[i]
-        count += 1
 
-test_dict = {}
-for i in range(len(attributes)):
-    test_dict[attributes[i]] = []
-count = 0
-with open("test.csv") as file:
-    for line in file:
-        if count > 1000:
-            break
-        terms = line.strip().split(",")
-        for i in range(len(attributes)):
-            test_dict[attributes[i]].append(terms[i]) #= terms[i]
-        count += 1
-
-
-df = p.DataFrame(dict)
-test_df = p.DataFrame(test_dict)
-#displayhook(df)
+df = read.read_data_into_dataframe("train.csv", attributes)
+test_df = read.read_data_into_dataframe("test.csv", attributes)
+#sys.displayhook(df)
 #displayhook(test_df)
 most_common = df["label"].mode()[0]
 root = ID3(df, attributes, attribute_values, labels, most_common)
+# print(root.children[0].label)
+# print(root.children[1].feature)
+# print(root.children[2])
+# print(root.children[3])
 error_count = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[[i]]
@@ -163,5 +145,5 @@ for i in range(len(test_df.index)):
     result_label = traverse_tree(i, row, root, attribute_values)
     if (actual_label != result_label):
         error_count += 1
-    print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))
+    #print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))
 print("Total Errors: ", str(error_count))
