@@ -141,7 +141,7 @@ root = ID3(df, attributes, attribute_values, labels, most_common)
 error_count = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[[i]]
-    actual_label = item_value = row.at[i, "label"]
+    actual_label = row.at[i, "label"]
     result_label = traverse_tree(i, row, root, attribute_values)
     if (actual_label != result_label):
         error_count += 1

@@ -39,6 +39,7 @@ df = read.read_data_into_dataframe("train.csv", attributes, 1000000)
 
 df = read.convert_dataframe(df)
 sys.displayhook(df)
+
 ##################################################################
 
 
@@ -94,7 +95,7 @@ def get_IG(GI_of_set, df, feature, attribute_values, labels):
         sigma += term
     return GI_of_set - sigma
 
-def find_highest_IG(df, attributes, labels, attribute_values):
+def find_highest_IG(df, attributes, labels, attribute_values, weights):
     gini_of_set = get_GI_of_dataset(df, labels)
     IG_for_each_value = {}
     for i in range(len(attributes) - 1):
@@ -140,21 +141,62 @@ def get_stump(df, attributes, attribute_values, labels):
     return root
 ##########################################################################
 
+def test_then_get_alpha_and_agreement_vector(stump, test_df, weights, num_test_examples):
+    agreement_vector = [1] * num_test_examples
+    error = 0.0
+    for i in range(len(test_df.index)):
+        row = test_df.iloc[[i]]
+        actual_label = row.at[i, "y"]
+        result_label = traverse_tree(i, row, stump, attribute_values)
+        if (actual_label != result_label):
+            error += weights[i]
+            agreement_vector[i] = -1
+    alpha = (1 / 2) * math.log((1 - error) / error)
+    return (alpha, agreement_vector)
+
+def reweight(old_weights, alpha, agreement_vector):
+    new_weights_unormalized = [0] * len(old_weights)
+    for i in range(len(new_weights_unormalized)):
+        new_weights_unormalized[i] = old_weights[i] * math.exp(-1 * alpha * agreement_vector[i])
+    normalization_constant = sum(new_weights_unormalized)
+    new_weights = [0] * len(old_weights)
+    for i in range(len(new_weights)):
+        new_weights[i] = new_weights_unormalized[i] / normalization_constant
+    return new_weights
+
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
-stump = get_stump(df, attributes, attribute_values, labels)
-
+### ADABOOST ###
+t = 10
+alpha_values = [0] * t
+weak_classifier = [None] * 10
 test_df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
 test_df = read.convert_dataframe(test_df)
-error_count = 0
-for i in range(len(test_df.index)):
-    row = test_df.iloc[[i]]
-    actual_label = item_value = row.at[i, "y"]
-    result_label = traverse_tree(i, row, stump, attribute_values)
-    if (actual_label != result_label):
-        error_count += 1
-print("Total Errors: ", str(error_count))
-print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
-print(stump.feature)
+num_test_examples = len(test_df.index)
+weights = [1 / num_test_examples] * num_test_examples
+for i in range(t):
+    ### Obtain weak classifier ###
+    stump = get_stump(df, attributes, attribute_values, labels)
+
+    ### Get vote (and "agreement vector") ###
+    alpha_and_agreement_vector = test_then_get_alpha_and_agreement_vector(stump, test_df, weights)
+    alpha = alpha_and_agreement_vector[0]
+    agreement_vector = alpha_and_agreement_vector[1]
+
+    ### Record alpha value or "vote" for this round ###
+    alpha_values[i] = alpha
+
+
+
+# error_count = 0.0
+# for i in range(len(test_df.index)):
+#     row = test_df.iloc[[i]]
+#     actual_label = item_value = row.at[i, "y"]
+#     result_label = traverse_tree(i, row, stump, attribute_values)
+#     if (actual_label != result_label):
+#         error_count += 1
+# print("Total Errors: ", str(error_count))
+# print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
+# print(stump.feature)
 
 #---------------------------------------------------------------------------------------------------------------------------#
