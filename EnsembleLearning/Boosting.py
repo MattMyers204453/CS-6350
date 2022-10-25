@@ -53,7 +53,7 @@ def getp_weighted(df, label_value, weights):
     for i in range(num_rows):
         row = df.iloc[i]
         actual_label = row.get("y")
-        if (actual_label == label_value):
+        if (actual_label != label_value):
             probability += weights[i]
     return probability
     #numerator = sum(df["y"] == label_value)
@@ -159,9 +159,9 @@ def test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_exampl
     agreement_vector = [1] * num_test_examples
     error = 0.0
     for i in range(len(df.index)):
-        row = df.iloc[[i]]
-        actual_label = row.at[i, "y"]
-        result_label = traverse_tree(i, row, stump, attribute_values)
+        row = df.iloc[i]
+        actual_label = row.get("y")
+        result_label = traverse_tree(row, stump, attribute_values)
         if (actual_label != result_label):
             error += weights[i]
             agreement_vector[i] = -1
@@ -217,10 +217,10 @@ def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
 
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
-adaboost_model = adaboost_train(5, df)
+adaboost_model = adaboost_train(15, df)
 test_df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
 test_df = read.convert_dataframe(test_df)
-error_count = 0.0
+error_count = 1
 for i in range(len(test_df.index)):
     row = test_df.iloc[i]
     actual_label = row.get("y")
