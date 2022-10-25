@@ -1,5 +1,6 @@
 #from sys import displayhook
 import sys
+from turtle import pos
 import pandas as p
 import math
 import read_data_ensemble as read
@@ -39,7 +40,9 @@ df = read.read_data_into_dataframe("train.csv", attributes, 1000000)
 
 df = read.convert_dataframe(df)
 sys.displayhook(df)
-
+# subset = df.loc[(df["marital"] == "single")]
+# sys.displayhook(subset)
+# print(subset.iloc[2].name)
 ##################################################################
 
 
@@ -146,14 +149,31 @@ def get_stump(df, attributes, attribute_values, labels, weights):
         subset = df.loc[(df[feature_with_highest_IG] == value)]
         weak_stump_guess = None
         if (len(subset.index) == 0):
-            weak_stump_guess = df["y"].mode()[0]
+            # weak_stump_guess = df["y"].mode()[0]  ###<------------- THIS IS THE ISSUE RIGHT HERE> LOOK AT "AdaBoost implementation" DISCUSSION
+            weak_stump_guess = weighted_mode(df, weights)
         else:
-            weak_stump_guess = subset["y"].mode()[0]
+            #weak_stump_guess = subset["y"].mode()[0]
+            weak_stump_guess = weighted_mode(subset, weights) #<--- adjust weights to subset! Think I fixed it with iloc[i].name?
         leaf = Node(False, None, True, weak_stump_guess)
         root.children[i] = leaf
         i += 1
     return root
-##########################################################################
+
+def weighted_mode(df, weights):
+    num_rows = len(df.index)
+    neg_count = 0.0
+    pos_count = 0.0
+    for i in range(num_rows):
+        row = df.iloc[i]
+        actual_label = row.get("y")
+        if (actual_label == -1):
+            neg_count += weights[row.name]
+        else:
+            pos_count += weights[row.name]
+    if (neg_count > pos_count):
+        return -1
+    return 1
+
 
 def test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_examples):
     agreement_vector = [1] * num_test_examples
@@ -171,6 +191,8 @@ def test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_exampl
 def reweight(old_weights, alpha, agreement_vector):
     new_weights_unormalized = [0] * len(old_weights)
     for i in range(len(new_weights_unormalized)):
+        # if i % 100 == 0:
+        #     print(old_weights[i])
         new_weights_unormalized[i] = old_weights[i] * math.exp(-1 * alpha * agreement_vector[i])
     normalization_constant = sum(new_weights_unormalized)
     new_weights = [0] * len(old_weights)
@@ -186,6 +208,7 @@ def adaboost_train(t, df):
     for i in range(t):
         ### Obtain weak classifier ###
         stump = get_stump(df, attributes, attribute_values, labels, weights)
+        print(stump.feature)
 
         ### Record weak classifier or "stump" ###
         weak_classifiers[i] = stump
@@ -197,6 +220,7 @@ def adaboost_train(t, df):
 
         ### Record alpha value or "vote" for this round ###
         alpha_values[i] = alpha
+        print(alpha)
 
         ### Update weights ###
         weights = reweight(weights, alpha, agreement_vector)
@@ -217,8 +241,8 @@ def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
 
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
-adaboost_model = adaboost_train(15, df)
-test_df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
+adaboost_model = adaboost_train(5, df)
+test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
 test_df = read.convert_dataframe(test_df)
 error_count = 1
 for i in range(len(test_df.index)):
