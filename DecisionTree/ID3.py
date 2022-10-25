@@ -101,10 +101,10 @@ def ID3(df, attributes, attribute_values, labels, most_common_label):
         i += 1
     return root
 
-def traverse_tree(i, df, root, attribute_values):
+def traverse_tree(row, root, attribute_values):
     while root.isLeafNode == False:
         feature = root.feature
-        item_value = df.at[i, feature]
+        item_value = row.get(feature)
         index = attribute_values[feature].index(item_value)
         root = root.children[index]
     return root.label
@@ -129,9 +129,13 @@ for i in range(len(attributes)):
 
 
 df = read.read_data_into_dataframe("train.csv", attributes)
+# row = df.iloc[:1]
+# sys.displayhook(row)
+# first_row_of_row_as_series = row.iloc[0]
+# print(first_row_of_row_as_series.get("safety"))
 test_df = read.read_data_into_dataframe("test.csv", attributes)
-#sys.displayhook(df)
-#displayhook(test_df)
+# sys.displayhook(df)
+# sys.displayhook(test_df)
 most_common = df["label"].mode()[0]
 root = ID3(df, attributes, attribute_values, labels, most_common)
 # print(root.children[0].label)
@@ -140,9 +144,9 @@ root = ID3(df, attributes, attribute_values, labels, most_common)
 # print(root.children[3])
 error_count = 0
 for i in range(len(test_df.index)):
-    row = test_df.iloc[[i]]
-    actual_label = row.at[i, "label"]
-    result_label = traverse_tree(i, row, root, attribute_values)
+    row = test_df.iloc[i]
+    actual_label = row.get("label")
+    result_label = traverse_tree(row, root, attribute_values)
     if (actual_label != result_label):
         error_count += 1
     #print("RESULT: ", str(result_label), " ---> ACTUAL: ", str(actual_label))

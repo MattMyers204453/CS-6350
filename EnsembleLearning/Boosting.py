@@ -45,12 +45,26 @@ sys.displayhook(df)
 
 
 ### DECISION TREE FUNCTIONS ###
-def getp(df, label_value):
-    total = len(df.index) 
-    if (total == 0):
+def getp_weighted(df, label_value, weights):
+    num_rows = len(df.index) 
+    if (num_rows == 0):
         return 0
-    numerator = sum(df["y"] == label_value)
-    return (numerator / float(total))
+    probability = 0
+    for i in range(num_rows):
+        row = df.iloc[i]
+        actual_label = row.get("y")
+        if (actual_label == label_value):
+            probability += weights[i]
+    return probability
+    #numerator = sum(df["y"] == label_value)
+    #return (numerator / float(total))
+
+# def getp(df, label_value):
+#     total = len(df.index) 
+#     if (total == 0):
+#         return 0
+#     numerator = sum(df["y"] == label_value)
+#     return (numerator / float(total))
 
 def get_entropy_of_dataset(df, labels):
     sum = 0.0
@@ -60,15 +74,15 @@ def get_entropy_of_dataset(df, labels):
             sum += (prob_i * math.log(prob_i, len(labels)))
     return sum * -1
 
-def get_GI_of_dataset(df, labels):
+def get_GI_of_dataset(df, labels, weights):
     sum = 0.0
     for label in labels:
-        prob_i = getp(df, label)
+        prob_i = getp_weighted(df, label, weights)
         sum += (prob_i * prob_i)
     return (1 - sum)
 
 # feature refers to particular attribute
-def get_GI_of_feature_at_specific_value(df, feature, value, labels):
+def get_GI_of_feature_at_specific_value(df, feature, value, labels, weights):
     #total_num_features_at_that_value = sum(df[feature] == value)
     subset = df.loc[(df[feature] == value)] #& (df["label"] == "unacc")]
     if len(subset.index) == 0:
@@ -76,16 +90,16 @@ def get_GI_of_feature_at_specific_value(df, feature, value, labels):
     #displayhook(subset)
     sigma = 0.0
     for label in labels:
-        prob_i = getp(subset, label)
+        prob_i = getp_weighted(subset, label, weights)
         sigma += (prob_i * prob_i)
     return (1 - sigma)
 
 
 # feature refers to particular attribute
-def get_IG(GI_of_set, df, feature, attribute_values, labels):
+def get_IG(GI_of_set, df, feature, attribute_values, labels, weights):
     gini_for_each_value = {}
     for value in attribute_values[feature]:
-        GI = get_GI_of_feature_at_specific_value(df, feature, value, labels)
+        GI = get_GI_of_feature_at_specific_value(df, feature, value, labels, weights)
         gini_for_each_value[value] = GI
     length_of_whole_set = len(df.index)
     sigma = 0.0
@@ -96,10 +110,10 @@ def get_IG(GI_of_set, df, feature, attribute_values, labels):
     return GI_of_set - sigma
 
 def find_highest_IG(df, attributes, labels, attribute_values, weights):
-    gini_of_set = get_GI_of_dataset(df, labels)
+    gini_of_set = get_GI_of_dataset(df, labels, weights)
     IG_for_each_value = {}
     for i in range(len(attributes) - 1):
-        IG = get_IG(gini_of_set, df, attributes[i], attribute_values, labels)
+        IG = get_IG(gini_of_set, df, attributes[i], attribute_values, labels, weights)
         IG_for_each_value[attributes[i]] = IG
     best_feature = max(IG_for_each_value, key=IG_for_each_value.get)
     return best_feature
@@ -114,18 +128,18 @@ class Node:
         self.feature = feature
         self.label = label
 
-def traverse_tree(i, df, root, attribute_values):
+def traverse_tree(row, root, attribute_values):
     while root.isLeafNode == False:
         feature = root.feature
-        item_value = df.at[i, feature]
+        item_value = row.get(feature)
         index = attribute_values[feature].index(item_value)
         root = root.children[index]
     return root.label
 #########################################################################
 
 ### BOOSTING FUNCTIONS ###
-def get_stump(df, attributes, attribute_values, labels):
-    feature_with_highest_IG = find_highest_IG(df, attributes, labels, attribute_values)
+def get_stump(df, attributes, attribute_values, labels, weights):
+    feature_with_highest_IG = find_highest_IG(df, attributes, labels, attribute_values, weights)
     root = Node(True, feature_with_highest_IG, False, None)
     i = 0
     for value in attribute_values[feature_with_highest_IG]:
@@ -141,11 +155,11 @@ def get_stump(df, attributes, attribute_values, labels):
     return root
 ##########################################################################
 
-def test_then_get_alpha_and_agreement_vector(stump, test_df, weights, num_test_examples):
+def test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_examples):
     agreement_vector = [1] * num_test_examples
     error = 0.0
-    for i in range(len(test_df.index)):
-        row = test_df.iloc[[i]]
+    for i in range(len(df.index)):
+        row = df.iloc[[i]]
         actual_label = row.at[i, "y"]
         result_label = traverse_tree(i, row, stump, attribute_values)
         if (actual_label != result_label):
@@ -164,35 +178,95 @@ def reweight(old_weights, alpha, agreement_vector):
         new_weights[i] = new_weights_unormalized[i] / normalization_constant
     return new_weights
 
+def adaboost_train(t, df):
+    alpha_values = [0] * t
+    weak_classifiers = [None] * t
+    num_test_examples = len(df.index)
+    weights = [1 / num_test_examples] * num_test_examples 
+    for i in range(t):
+        ### Obtain weak classifier ###
+        stump = get_stump(df, attributes, attribute_values, labels, weights)
+
+        ### Record weak classifier or "stump" ###
+        weak_classifiers[i] = stump
+
+        ### Get vote (and "agreement vector") ###
+        alpha_and_agreement_vector = test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_examples)
+        alpha = alpha_and_agreement_vector[0]
+        agreement_vector = alpha_and_agreement_vector[1]
+
+        ### Record alpha value or "vote" for this round ###
+        alpha_values[i] = alpha
+
+        ### Update weights ###
+        weights = reweight(weights, alpha, agreement_vector)
+    return (alpha_values, weak_classifiers)
+
+def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
+    alpha_values = trained_adaboost_alphas_classifiers[0]
+    weak_classifiers = trained_adaboost_alphas_classifiers[1]
+    t = len(alpha_values)
+    final_sum = 0.0
+    for i in range(t):
+        h_x = traverse_tree(row, weak_classifiers[i], attribute_values)
+        a = alpha_values[i]
+        final_sum += (a * h_x)
+    if (final_sum > 0):
+        return 1
+    return -1
+
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
-### ADABOOST ###
-t = 10
-alpha_values = [0] * t
-weak_classifier = [None] * 10
+adaboost_model = adaboost_train(5, df)
 test_df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
 test_df = read.convert_dataframe(test_df)
-num_test_examples = len(test_df.index)
-weights = [1 / num_test_examples] * num_test_examples
-for i in range(t):
-    ### Obtain weak classifier ###
-    stump = get_stump(df, attributes, attribute_values, labels)
+error_count = 0.0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[i]
+    actual_label = row.get("y")
+    result_label = ADABOOST(row, adaboost_model, attribute_values)
+    if (actual_label != result_label):
+        error_count += 1
+print("Total Errors: ", str(error_count))
+print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
+### ADABOOST ###
+# t = 10
+# alpha_values = [0] * t
+# weak_classifiers = [None] * t
+# #test_df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
+# #test_df = read.convert_dataframe(test_df)
+# num_test_examples = len(df.index)
+# weights = [1 / num_test_examples] * num_test_examples 
+# for i in range(t):
+#     ### Obtain weak classifier ###
+#     stump = get_stump(df, attributes, attribute_values, labels, weights)
 
-    ### Get vote (and "agreement vector") ###
-    alpha_and_agreement_vector = test_then_get_alpha_and_agreement_vector(stump, test_df, weights)
-    alpha = alpha_and_agreement_vector[0]
-    agreement_vector = alpha_and_agreement_vector[1]
+#     ### Record weak classifier or "stump" ###
+#     weak_classifiers[i] = stump
 
-    ### Record alpha value or "vote" for this round ###
-    alpha_values[i] = alpha
+#     ### Get vote (and "agreement vector") ###
+#     alpha_and_agreement_vector = test_then_get_alpha_and_agreement_vector(stump, df, weights)
+#     alpha = alpha_and_agreement_vector[0]
+#     agreement_vector = alpha_and_agreement_vector[1]
 
+#     ### Record alpha value or "vote" for this round ###
+#     alpha_values[i] = alpha
+
+#     ### Update weights ###
+#     weights = reweight(weights, alpha, agreement_vector)
+
+### Return final hypothesis ###
+# final_sum = 0.0
+# for i in range(t):
+#     h_x = traverse_tree(i, )
+#     final_sum += alpha_values[i] * 
 
 
 # error_count = 0.0
 # for i in range(len(test_df.index)):
 #     row = test_df.iloc[[i]]
 #     actual_label = item_value = row.at[i, "y"]
-#     result_label = traverse_tree(i, row, stump, attribute_values)
+#     result_label = traverse_tree(row, stump, attribute_values)
 #     if (actual_label != result_label):
 #         error_count += 1
 # print("Total Errors: ", str(error_count))
