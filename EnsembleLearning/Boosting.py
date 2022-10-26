@@ -35,11 +35,11 @@ attribute_values["y"] = [-1, 1]
 ###########################################################
 
 ### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
-df = read.read_data_into_dataframe("train.csv", attributes, 1000000)
+df = read.read_data_into_dataframe("train.csv", attributes, 50)
 #sys.displayhook(df)
 
 df = read.convert_dataframe(df)
-sys.displayhook(df)
+#sys.displayhook(df)
 # subset = df.loc[(df["marital"] == "single")]
 # sys.displayhook(subset)
 # print(subset.iloc[2].name)
@@ -49,15 +49,19 @@ sys.displayhook(df)
 
 ### DECISION TREE FUNCTIONS ###
 def getp_weighted(df, label_value, weights):
-    num_rows = len(df.index) 
+    num_rows = len(df.index)
     if (num_rows == 0):
         return 0
+    sum_of_subset_weights = 0
+    for i in range(num_rows):
+        row = df.iloc[i]
+        sum_of_subset_weights += weights[row.name]
     probability = 0
     for i in range(num_rows):
         row = df.iloc[i]
         actual_label = row.get("y")
-        if (actual_label != label_value):
-            probability += weights[i]
+        if (actual_label == label_value):
+            probability += (weights[row.name] / sum_of_subset_weights)
     return probability
     #numerator = sum(df["y"] == label_value)
     #return (numerator / float(total))
@@ -69,13 +73,13 @@ def getp_weighted(df, label_value, weights):
 #     numerator = sum(df["y"] == label_value)
 #     return (numerator / float(total))
 
-def get_entropy_of_dataset(df, labels):
-    sum = 0.0
-    for label in labels:
-        prob_i = getp(df, label)
-        if prob_i != 0:
-            sum += (prob_i * math.log(prob_i, len(labels)))
-    return sum * -1
+# def get_entropy_of_dataset(df, labels):
+#     sum = 0.0
+#     for label in labels:
+#         prob_i = getp(df, label)
+#         if prob_i != 0:
+#             sum += (prob_i * math.log(prob_i, len(labels)))
+#     return sum * -1
 
 def get_GI_of_dataset(df, labels, weights):
     sum = 0.0
@@ -90,12 +94,8 @@ def get_GI_of_feature_at_specific_value(df, feature, value, labels, weights):
     subset = df.loc[(df[feature] == value)] #& (df["label"] == "unacc")]
     if len(subset.index) == 0:
         return 0
-    #displayhook(subset)
-    sigma = 0.0
-    for label in labels:
-        prob_i = getp_weighted(subset, label, weights)
-        sigma += (prob_i * prob_i)
-    return (1 - sigma)
+    GI_of_feature_at_specific_value = get_GI_of_dataset(subset, labels, weights)
+    return GI_of_feature_at_specific_value
 
 
 # feature refers to particular attribute
@@ -107,8 +107,10 @@ def get_IG(GI_of_set, df, feature, attribute_values, labels, weights):
     length_of_whole_set = len(df.index)
     sigma = 0.0
     for value, GI in gini_for_each_value.items():
-        num_features_at_this_value = sum(df[feature] == value)
-        term = (num_features_at_this_value / float(length_of_whole_set)) * GI
+        # num_features_at_this_value = sum(df[feature] == value)
+        # term = (num_features_at_this_value / float(length_of_whole_set)) * GI
+        fractional_sum = get_weighted_sum_at_feature(df, feature, value, weights)
+        term = fractional_sum * GI
         sigma += term
     return GI_of_set - sigma
 
@@ -159,6 +161,16 @@ def get_stump(df, attributes, attribute_values, labels, weights):
         i += 1
     return root
 
+def get_weighted_sum_at_feature(df, feature, feature_value, weights):
+    num_rows = len(df.index)
+    weighted_sum = 0.0
+    for i in range(num_rows):
+        row = df.iloc[i]
+        actual_label = row.get(feature)
+        if (actual_label == feature_value):
+            weighted_sum += weights[row.name]
+    return weighted_sum
+
 def weighted_mode(df, weights):
     num_rows = len(df.index)
     neg_count = 0.0
@@ -185,6 +197,8 @@ def test_then_get_alpha_and_agreement_vector(stump, df, weights, num_test_exampl
         if (actual_label != result_label):
             error += weights[i]
             agreement_vector[i] = -1
+    if error == 0:
+        error = 0.00001
     alpha = (1 / 2) * math.log((1 - error) / error)
     return (alpha, agreement_vector)
 
@@ -208,7 +222,6 @@ def adaboost_train(t, df):
     for i in range(t):
         ### Obtain weak classifier ###
         stump = get_stump(df, attributes, attribute_values, labels, weights)
-        print(stump.feature)
 
         ### Record weak classifier or "stump" ###
         weak_classifiers[i] = stump
@@ -220,7 +233,6 @@ def adaboost_train(t, df):
 
         ### Record alpha value or "vote" for this round ###
         alpha_values[i] = alpha
-        print(alpha)
 
         ### Update weights ###
         weights = reweight(weights, alpha, agreement_vector)
@@ -241,18 +253,24 @@ def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
 
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
-adaboost_model = adaboost_train(5, df)
-test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
-test_df = read.convert_dataframe(test_df)
-error_count = 1
-for i in range(len(test_df.index)):
-    row = test_df.iloc[i]
-    actual_label = row.get("y")
-    result_label = ADABOOST(row, adaboost_model, attribute_values)
-    if (actual_label != result_label):
-        error_count += 1
-print("Total Errors: ", str(error_count))
-print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
+t_array = [2, 5, 10, 50, 150, 300, 500]
+
+for i in range(len(t_array)):
+    adaboost_model = adaboost_train(t_array[i], df)
+    test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
+    test_df = read.convert_dataframe(test_df)
+    error_count = 1
+    for i in range(len(test_df.index)):
+        row = test_df.iloc[i]
+        actual_label = row.get("y")
+        result_label = ADABOOST(row, adaboost_model, attribute_values)
+        if (actual_label != result_label):
+            error_count += 1
+    #print(f"TOTAL ERRORS for t = {t_array[i]}: {error_count}")
+    print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
+    print("---------------------------------------")
+    print("---------------------------------------")
+    print("---------------------------------------")
 ### ADABOOST ###
 # t = 10
 # alpha_values = [0] * t

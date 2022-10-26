@@ -35,11 +35,7 @@ def get_GI_of_feature_at_specific_value(df, feature, value, labels):
     if len(subset.index) == 0:
         return 0
     #displayhook(subset)
-    sigma = 0.0
-    for label in labels:
-        prob_i = getp(subset, label)
-        sigma += (prob_i * prob_i)
-    return (1 - sigma)
+    return get_GI_of_dataset(subset, labels)
 
 
 # feature refers to particular attribute
