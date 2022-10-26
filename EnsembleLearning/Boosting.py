@@ -255,8 +255,8 @@ def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
 t_array = [2, 5, 10, 50, 150, 300, 500]
 
-for i in range(len(t_array)):
-    adaboost_model = adaboost_train(t_array[i], df)
+for j in range(len(t_array)):
+    adaboost_model = adaboost_train(t_array[j], df)
     test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
     test_df = read.convert_dataframe(test_df)
     error_count = 1
@@ -266,7 +266,7 @@ for i in range(len(t_array)):
         result_label = ADABOOST(row, adaboost_model, attribute_values)
         if (actual_label != result_label):
             error_count += 1
-    #print(f"TOTAL ERRORS for t = {t_array[i]}: {error_count}")
+    print(f"TOTAL ERRORS for t = {t_array[j]}: {error_count}")
     print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
     print("---------------------------------------")
     print("---------------------------------------")
