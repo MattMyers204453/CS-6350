@@ -1,22 +1,32 @@
+from distutils.log import error
 import sys
 import pandas as p
 import math
 import read_data_LinearRegression as read
 import os
+import numpy as np
 
 attributes = ["Cement", "Slag", "Fly ash", "Water", "SP", "Coarse Aggr", "Fine Aggr", "SLUMP"]
 
-df = read.read_data_into_dataframe("test.csv", attributes, 1000000)
-sys.displayhook(df)
-
-sys.displayhook(df)
+df = read.read_data_into_dataframe("train.csv", attributes, 1000000)
 #####################################
 
 def compute_gradient_of_cost(df, w, m):
-    for i in range(len(w)):
-        break
-    return -1 
-    
+    m = len(df.index)
+    w_gradient = [1] * len(w)
+    for j in range(len(w)):
+        w_gradient[j] = compute_partial_gradient(df, w, j, m)
+    return np.array(w_gradient)
+
+def compute_partial_gradient(df, w, j, m):
+    sum = 0.0
+    for i in range(m):
+        y_i = get_label_at(i, df)
+        x_i = get_x_vector_at(i, df)
+        term = (y_i - (np.dot(w.T, x_i))) * x_i[j]
+        sum += term
+    return sum * -1
+
 
 def sum_squares(df, w):
     return 0
@@ -25,7 +35,8 @@ def get_x_vector_at(i, df):
     row = df.iloc[i]
     row_as_list = row.to_list()[:-1]
     row_as_list.insert(0, 1)
-    return row_as_list
+    row_as_matrix = np.array(row_as_list)
+    return row_as_matrix
 
 def get_label_at(i, df):
     row = df.iloc[i]
@@ -35,12 +46,28 @@ def get_label_at(i, df):
 
 #####################################
 num_of_features = len(attributes) - 1 # minus one to drop off the label (SLUMP)
-w = [0] * (num_of_features + 1) # plus one to account for constant in w-vector (notational sugar)
+w_as_list = [0] * (num_of_features + 1) # plus one to account for constant in w-vector (notational sugar)
+w = np.array(w_as_list)
 m = len(df.index)
 
-print(get_x_vector_at(0, df))
-print(get_label_at(5, df))
-### GRADIENT DESCENT ###
-# T = 10
-# for t in range(T):
+
+r = 0.5
+T = 100
+for t in range(T):
+    gradient = compute_gradient_of_cost(df, w, m)
+    w = np.subtract(w, r * gradient)
+
+
+test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
+
+
+error_sum = 0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[i]
+    actual_value = row.get("SLUMP")
+    x_vector = get_x_vector_at(i, test_df)
+    guess = np.dot(w.T, x_vector)
+    diff = abs(actual_value - guess)
+    error_sum += diff
+print(f"SUM OF ERRORS: {error_sum}")
 

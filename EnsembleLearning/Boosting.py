@@ -231,7 +231,7 @@ test_df = read.convert_dataframe(test_df)
 t_array = [2, 5, 10, 50, 200]
 for j in range(len(t_array)):
     adaboost_model = adaboost_train(t_array[j], df)
-    error_count = 1
+    error_count = 0
     for i in range(len(test_df.index)):
         row = test_df.iloc[i]
         actual_label = row.get("y")
