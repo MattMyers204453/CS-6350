@@ -34,13 +34,6 @@ attribute_values["poutcome"] = ["unknown","other","failure","success"]
 attribute_values["y"] = [-1, 1]
 ###########################################################
 
-### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
-df = read.read_data_into_dataframe("train.csv", attributes, 500)
-
-df = read.convert_dataframe(df)
-
-##################################################################
-
 
 
 ### DECISION TREE FUNCTIONS ###
@@ -223,25 +216,39 @@ def ADABOOST(row, trained_adaboost_alphas_classifiers, attribute_values):
         return 1
     return -1
 
+def get_sample(df, size):
+    df_random = df[0:0]
+    for i in range(size):
+        random_row = df.sample()
+        df_random = p.concat([df_random, random_row], ignore_index=True)
+    return df_random
+
 
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
+### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
+print("Reading data...")
+df = read.read_data_into_dataframe("train.csv", attributes, 500)
+df = read.convert_dataframe(df)
+
 test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
 test_df = read.convert_dataframe(test_df)
 
-t_array = [2, 5, 10, 50, 200]
-for j in range(len(t_array)):
-    adaboost_model = adaboost_train(t_array[j], df)
-    error_count = 0
-    for i in range(len(test_df.index)):
-        row = test_df.iloc[i]
-        actual_label = row.get("y")
-        result_label = ADABOOST(row, adaboost_model, attribute_values)
-        if (actual_label != result_label):
-            error_count += 1
-    print(f"TOTAL ERRORS for t = {t_array[j]}: {error_count}")
-    print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
-    print("---------------------------------------")
-    print("---------------------------------------")
-    print("---------------------------------------")
+T = int(sys.argv[1])
+training_sample_size = int(sys.argv[2])
+
+df = get_sample(df, training_sample_size)
+
+print("Training model...")
+adaboost_model = adaboost_train(T, df)
+print("Testing model...")
+error_count = 0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[i]
+    actual_label = row.get("y")
+    result_label = ADABOOST(row, adaboost_model, attribute_values)
+    if (actual_label != result_label):
+        error_count += 1
+print("Total Errors: ", str(error_count))
+print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
 
 #---------------------------------------------------------------------------------------------------------------------------#

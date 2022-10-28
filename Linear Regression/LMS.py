@@ -1,4 +1,4 @@
-from distutils.log import error
+
 import sys
 import pandas as p
 import math
@@ -8,7 +8,10 @@ import numpy as np
 
 attributes = ["Cement", "Slag", "Fly ash", "Water", "SP", "Coarse Aggr", "Fine Aggr", "SLUMP"]
 
-df = read.read_data_into_dataframe("train.csv", attributes, 1000000)
+print("Reading data...")
+df = read.read_data_into_dataframe("train.csv", attributes, 1000000)    
+test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
+#test_df = df
 #####################################
 
 def compute_gradient_of_cost(df, w, m):
@@ -51,16 +54,17 @@ w = np.array(w_as_list)
 m = len(df.index)
 
 
-r = 0.5
-T = 100
+T = int(sys.argv[1])
+r = float(sys.argv[2])
+
+# T = 2
+# r = 0.002
+print("Training model...")
 for t in range(T):
     gradient = compute_gradient_of_cost(df, w, m)
     w = np.subtract(w, r * gradient)
 
-
-test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
-
-
+print("Testing model...")
 error_sum = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[i]
@@ -68,6 +72,7 @@ for i in range(len(test_df.index)):
     x_vector = get_x_vector_at(i, test_df)
     guess = np.dot(w.T, x_vector)
     diff = abs(actual_value - guess)
+    print(f"ACTUAL: {actual_value} GUESS: {guess}")
     error_sum += diff
 print(f"SUM OF ERRORS: {error_sum}")
 

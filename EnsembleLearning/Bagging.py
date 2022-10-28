@@ -37,9 +37,10 @@ attribute_values["y"] = [-1, 1]
 ###########################################################
 
 ### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
+print("Reading data...")
 df = read.read_data_into_dataframe("train.csv", attributes, 100000)
 df = read.convert_dataframe(df)
-sys.displayhook(df)
+# sys.displayhook(df)
 
 test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
 test_df = read.convert_dataframe(test_df)
@@ -49,7 +50,7 @@ def get_sample(df, size):
     df_random = df[0:0]
     for i in range(size):
         random_row = df.sample()
-        df_random = p.concat([df_random, random_row], ignore_index=False)
+        df_random = p.concat([df_random, random_row], ignore_index=True)
     return df_random
 
 def test_then_get_alpha(tree, df):
@@ -115,6 +116,7 @@ def test_bagging(test_df, trained_model):
 ### TEST ###
 from threading import Thread
 
+print("Training model...")
 def get_trained_model_threading(df, T, sample_length):
     trees = [1] * T
     threads = []
@@ -122,18 +124,27 @@ def get_trained_model_threading(df, T, sample_length):
         df_sample = get_sample(df, sample_length)
         th = Thread(target=bagging_train, args=(df_sample, trees, i))
         threads.append(th)
+    j = 1
     for th in threads:
-        print("started")
+        print(f"Round {j} thread started...")
+        j += 1
         th.start()
+    k = 1
+    round_str = "Round"
+    round_str_plural = "Rounds"
     for th in threads:
+        print(f"{k} {round_str} finished...") if k == 1 else print(f"{k} {round_str_plural} finished...")
+        k += 1
         th.join()
-        print("joined")
+        
 
-    print(len(trees))
     return (trees, [1] * T)
 
-model_bagging = get_trained_model_threading(df, 100, 500)
+T = int(sys.argv[1])
+sample_size = int(sys.argv[2])
+model_bagging = get_trained_model_threading(df, T, sample_size)
 #model_bagging = bagging_train(df, 20, 50)
+print("Testing model...")
 test_bagging(test_df, model_bagging)
 
 
@@ -141,7 +152,7 @@ test_bagging(test_df, model_bagging)
 # import matplotlib.pyplot as plt
    
 # T = [2, 5, 10, 50, 200]
-# Accuracy = [0.8832, 0.8832, 0.8886, 0.8916, 0.9001]
+# Accuracy = [0.8728, 0.8738, 0.8864, 0.889, 0.8878]
   
 # plt.plot(T, Accuracy, color='red', marker='o')
 # plt.title('Accuracy for each T', fontsize=14)
