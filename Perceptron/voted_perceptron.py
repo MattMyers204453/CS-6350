@@ -15,10 +15,8 @@ test_df = read.read_data_into_dataframe("bank-note/test.csv", attributes, 1000)
 def get_x_vector_at(i, df):
     row = df.iloc[i]
     row_as_list = row.to_list()[:-1]
-    # row_as_list.insert(0, 1)
     row_as_list.append(1)
     row_as_matrix = np.array(row_as_list)
-    # print(row_as_matrix)
     return row_as_matrix
 
 def sgn(v):
@@ -71,7 +69,6 @@ for i in range(len(test_df.index)):
     x_vector = get_x_vector_at(i, test_df)
     actual = row.get("y")
     guess = final_predict(w_c, x_vector) 
-    # print(actual, " ", guess)   
     if guess != actual:
         errors += 1
 

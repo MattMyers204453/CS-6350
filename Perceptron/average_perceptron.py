@@ -37,8 +37,9 @@ w_as_list = [0] * (num_of_features + 1) # plus one to account for constant in w-
 w = np.array(w_as_list)
 m = len(df.index)
 
+a = [0] * (len(w_as_list))
 r = 1
-for j in range(15):
+for j in range(1):
     df = df.sample(frac=1)
     for i in range(len(df.index)):
         row = df.iloc[i]
@@ -47,13 +48,14 @@ for j in range(15):
         prediction = predict(w, x_vector)
         if prediction != actual_value:
             w = update(w, actual_value, x_vector, r)
+        a = np.add(a, w)
 
 errors = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[i]
     x_vector = get_x_vector_at(i, test_df)
     actual = row.get("y")
-    guess = predict(w, x_vector) 
+    guess = predict(a, x_vector) 
     if guess != actual:
         errors += 1
 
