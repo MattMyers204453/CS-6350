@@ -80,7 +80,7 @@ labels = [0, 1]
 attributes = ["age","workclass","fnlwgt","education","education.num","marital.status","occupation", "relationship","race", "sex","capital.gain","capital.loss","hours.per.week","native.country","income>50K"]
 categorical_attributes = ["workclass","education","marital.status","occupation", "relationship","race", "sex","native.country"]
 continuous_attributes = ["age","fnlwgt","education.num","capital.gain","capital.loss","hours.per.week"]
-df = read_data_into_dataframe("train_final.csv", attributes, continuous_attributes, False, 10000)
+df = read_data_into_dataframe("train_final.csv", attributes, continuous_attributes, False, 100000)
 #sys.displayhook(df)
 test_df = read_data_into_dataframe("test_final.csv", attributes[:-1], continuous_attributes, True, 1000000)
 #sys.displayhook(test_df)
