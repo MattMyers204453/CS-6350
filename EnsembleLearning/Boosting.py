@@ -235,7 +235,8 @@ test_df = read.convert_dataframe(test_df)
 
 T = int(sys.argv[1])
 training_sample_size = int(sys.argv[2])
-
+print(f"T = {T}")
+print(f"Training Sample Size = {training_sample_size}")
 df = get_sample(df, training_sample_size)
 
 print("Training model...")

@@ -142,21 +142,9 @@ def get_trained_model_threading(df, T, sample_length):
 
 T = int(sys.argv[1])
 sample_size = int(sys.argv[2])
+print(f"T = {T}")
+print(f"Sample Size = {sample_size}")
 model_bagging = get_trained_model_threading(df, T, sample_size)
 #model_bagging = bagging_train(df, 20, 50)
 print("Testing model...")
 test_bagging(test_df, model_bagging)
-
-
-
-# import matplotlib.pyplot as plt
-   
-# T = [2, 5, 10, 50, 200]
-# Accuracy = [0.8728, 0.8738, 0.8864, 0.889, 0.8878]
-  
-# plt.plot(T, Accuracy, color='red', marker='o')
-# plt.title('Accuracy for each T', fontsize=14)
-# plt.xlabel('T', fontsize=14)
-# plt.ylabel('Accuracy', fontsize=14)
-# plt.grid(True)
-# plt.show()

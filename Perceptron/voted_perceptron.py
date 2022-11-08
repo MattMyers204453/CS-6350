@@ -47,8 +47,12 @@ m = len(df.index)
 
 w_c = []
 c = 1
-r = 1
-for j in range(10):
+T = int(sys.argv[1]) if len(sys.argv) == 3 else 10
+r = float(sys.argv[2]) if len(sys.argv) == 3 else 1.0
+print(f"Epochs: {T}")
+print(f"Learning rate = {r}")
+print("Training model...")
+for j in range(T):
     df = df.sample(frac=1)
     for i in range(len(df.index)):
         row = df.iloc[i]
@@ -62,7 +66,7 @@ for j in range(10):
         else:
             c += 1
 
-
+print("Testing model...")
 errors = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[i]
@@ -72,5 +76,8 @@ for i in range(len(test_df.index)):
     if guess != actual:
         errors += 1
 
-print(f"TOTAL ERRORS: {errors}")
+print(f"TOTAL MISCLASSIFIED: {errors}")
 print(f"ACCURACY: {(float(len(test_df.index)) - errors) / float(len(test_df.index))}")
+
+# for i in range(len(w_c)):
+#     print(w_c[i])

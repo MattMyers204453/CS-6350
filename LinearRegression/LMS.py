@@ -59,20 +59,25 @@ r = float(sys.argv[2])
 
 # T = 2
 # r = 0.002
+print(f"T = {T}")
+print(f"r = {r}")
 print("Training model...")
 for t in range(T):
     gradient = compute_gradient_of_cost(df, w, m)
     w = np.subtract(w, r * gradient)
 
 print("Testing model...")
-error_sum = 0
-for i in range(len(test_df.index)):
+squared_error_sum = 0
+size = len(test_df.index)
+for i in range(size):
     row = test_df.iloc[i]
     actual_value = row.get("SLUMP")
     x_vector = get_x_vector_at(i, test_df)
     guess = np.dot(w.T, x_vector)
     diff = abs(actual_value - guess)
-    print(f"ACTUAL: {actual_value} GUESS: {guess}")
-    error_sum += diff
-print(f"SUM OF ERRORS: {error_sum}")
+    squared_error = diff * diff
+    # print(f"ACTUAL: {actual_value} GUESS: {guess}")
+    squared_error_sum += squared_error
+MSE = squared_error_sum / float(size)
+print(f"MEAN SQUARED ERROR: {MSE}")
 
