@@ -7,8 +7,8 @@ import read_data_svm as read
 	
 attributes = ["variance", "skewness", "kurtosis", "entropy", "y"]
 df = read.read_data_into_dataframe("bank-note/train.csv", attributes, 10000)
-#test_df = read.read_data_into_dataframe("bank-note/test.csv", attributes, 10000)
-test_df = df
+test_df = read.read_data_into_dataframe("bank-note/test.csv", attributes, 10000)
+#test_df = df
 
 #sys.displayhook(df)
 
@@ -24,10 +24,6 @@ def sgn(v):
         return 1
     return -1
 
-def update(w, y, x_vector, r):
-    w_new = np.add(w, r * y * x_vector)
-    return w_new
-
 def predict(w, x_vector):
     return sgn(np.dot(w, x_vector))
 
@@ -38,11 +34,10 @@ w = np.array(w_as_list)
 N = len(df.index) ### THIS SHOULD BE 873, not 872!
 T = 100
 r = 0.005
-a = 2
-#C = 100.0 / 872.0 ### THIS SHOULD BE 873, not 872!
-C = 500.0 / 872.0
-#C = 100.0 / 872.0
-##################w[len(w) - 1] = 0
+a = 0.5
+C = 100.0 / 872.0 ### THIS SHOULD BE 873, not 872!
+#C = 500.0 / 872.0
+#C = 700.0 / 872.0
 
 # print(sys.argv)
 # a = [0] * (len(w_as_list))
@@ -53,22 +48,32 @@ print(f"Learning rate = {r}")
 print("Training model...")
 for t in range(T):
     r = r / float(1 + (r*t) / float(a))
+    #r = r / float(1 + t)
     df = df.sample(frac=1)
     for i in range(len(df.index)):
         row = df.iloc[i]
         x_i = get_x_vector_at(i, df)
         y_i = row.get("y")
         if (y_i * np.dot(w, x_i)) <= 1:
+            # test_w = np.copy(w)
+            # test_w[len(test_w) - 1] = 0
+            # sub_grad = w - (C * N * y_i * x_i)
+            # print(sub_grad)
+
             term1 = r * w
             term1[len(term1) - 1] = 0
             w = w - term1 + (r * C * N * y_i * x_i)
         else:
+            # test_w = np.copy(w)
+            # test_w[len(test_w) - 1] = 0
+            # print(test_w)
+
             saved_b = w[len(w) - 1]
             w = (1 - r) * w
             w[len(w) - 1] = saved_b
 print(w)
 
-print("Testing model...")
+print("Testing model on testing data...")
 errors = 0
 for i in range(len(test_df.index)):
     row = test_df.iloc[i]
@@ -79,4 +84,18 @@ for i in range(len(test_df.index)):
         errors += 1
 
 print(f"TOTAL MISCLASSIFIED: {errors}")
-print(f"ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
+print(f"---TEST ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
+
+print("Testing model on training data...")
+errors = 0
+for i in range(len(df.index)):
+    row = df.iloc[i]
+    x_vector = get_x_vector_at(i, df)
+    actual = row.get("y")
+    guess = predict(w, x_vector) 
+    if guess != actual:
+        errors += 1
+
+print(f"TOTAL MISCLASSIFIED: {errors}")
+print(f"---TRAIN ACCURACY: {((float(len(df.index)) - errors) / float(len(df.index))) * 100}%")
+print(f"***MODEL PARAMETERS: {w}")
