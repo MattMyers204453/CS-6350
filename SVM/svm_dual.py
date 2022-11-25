@@ -5,23 +5,13 @@ import numpy as np
 import pandas as pd
 import read_data_svm as read
 from scipy import optimize
-
+from scipy.optimize import Bounds
+import math
 	
 attributes = ["variance", "skewness", "kurtosis", "entropy", "y"]
 df = read.read_data_into_dataframe("bank-note/train.csv", attributes, 10000)
 test_df = read.read_data_into_dataframe("bank-note/test.csv", attributes, 10000)
-#test_df = df
-df2 = df.copy()
-sys.displayhook(df)
-#del df["y"]
-x_matrix = df.to_numpy()
-# print(x_matrix)
-y_matrix = df["y"].to_numpy()
-# print(y_matrix)
-#sys.displayhook(df2)
-C = 100.0 / 872.0
-alphas = [0] * (len(x_matrix))
-# C_vector = [C] * (len(x_matrix))
+#sys.displayhook(df)
 
 def get_x_vector_at(i, df):
     row = df.iloc[i]
@@ -38,72 +28,107 @@ def sgn(v):
 def predict(w, x_vector):
     return sgn(np.dot(w, x_vector))
 
-def dual_function(alphas, x_matrix, y_matrix):
-    x_squared = np.matmul(x_matrix, x_matrix.T)
-    y_squared = np.matmul(y_matrix, y_matrix.T)
-    Hadamard_product = np.multiply(x_squared, y_squared)
-    term1 = np.dot(alphas.T, Hadamard_product)
+def kernel(x_i, x_j, gamma):
+    numerator = -1 * (np.linalg.norm((x_i - x_j), ord=1))**2
+    return math.exp(numerator / gamma)
+
+def compute_element_wise_product():
+    XXYY = np.zeros((M, M))
+    for r in range(M):
+        for c in range(M):
+            XXYY[r,c] = np.dot(x_matrix[r,:], x_matrix[c,:]) * y_matrix[r] * y_matrix[c]
+    return XXYY
+
+def compute_element_wise_product_kernel():
+    XXYY = np.zeros((M, M))
+    for r in range(M):
+        for c in range(M):
+            XXYY[r,c] = kernel(x_matrix[r,:], x_matrix[c,:]) * y_matrix[r] * y_matrix[c]
+    return XXYY
+
+def dual_function(alphas, x_matrix, y_matrix, XXYY):
+    term1 = np.dot(alphas.T, XXYY)
     term2 = np.dot(term1, alphas)
     result = 0.5 * term2 - np.sum(alphas)
     return result
 
+def recover_weight_vector(optimal_alphas, x_matrix, y_matrix, M, N):
+    w = np.zeros(N)
+    for i in range(M):
+        w = w + (optimal_alphas[i] * y_matrix[i] * x_matrix[i, :])        
+    return w
+
+def recover_b(optimal_alphas, x_matrix, y_matrix, w, C):
+    indices = np.where((optimal_alphas > 0.0000001)&(optimal_alphas < C))[0]
+    sum = 0.0
+    for j in indices:
+        sum += y_matrix[j] - np.dot(w, x_matrix[j])
+    b = sum / float(len(indices))
+    return b
+    # Uncomment below to use first on-the-margin example to recover b, rather than the average
+    # j = indices[0] 
+    # return y_matrix[j] - np.dot(w, x_matrix[j])
+
+def recover_weight_vector_kernel(optimal_alphas, x_matrix, y_matrix, M, N):
+    w = np.zeros(N)
+    for i in range(M):
+        w = w + (optimal_alphas[i] * y_matrix[i] * x_matrix[i, :])        
+    return w
+
+def recover_b_kernel(optimal_alphas, x_matrix, y_matrix, w, C):
+    indices = np.where((optimal_alphas > 0.0000001)&(optimal_alphas < C))[0]
+    sum = 0.0
+    for j in indices:
+        sum += y_matrix[j] - np.dot(w, x_matrix[j])
+    b = sum / float(len(indices))
+    return b
+
 # SVM Dual Optimization 
-# num_of_features = len(attributes) - 1 # minus one to drop off the label 
-# w_as_list = [0] * (num_of_features + 1) # plus one to account for constant in w-vector (notational sugar)
-# w = np.array(w_as_list)
-# N = len(df.index) ### THIS SHOULD BE 873, not 872!
-# T = 100
-# r = 0.005
-# a = 2
-# C = 100.0 / 872.0 ### THIS SHOULD BE 873, not 872!
+x_matrix = df[["variance", "skewness", "kurtosis", "entropy"]].to_numpy()
+y_matrix = df["y"].to_numpy()
+M, N = x_matrix.shape
+alphas = [0] * (len(x_matrix))
+#C = 100.0 / 872.0
 #C = 500.0 / 872.0
 #C = 700.0 / 872.0
+C = 1.1
 
-con1 = {'type': 'eq', 'fun': lambda alphas: np.dot(alphas, y_matrix), 'jac': lambda alphas: y_matrix}
-constraints = []
-for i in range(len(alphas)):
-    def con_func(i = i):
-        return C - alphas[i]
-    con = {'type': 'ineq', 'fun': con_func, 'jac': lambda alpha: -1}
-    constraints.append(con)
-# constraints = constraints+[con1]
-constraints = constraints.append(con1)
+# XXYY = compute_element_wise_product()
+XXYY = compute_element_wise_product_kernel()
+constraints = ({'type': 'eq', 'fun': lambda alphas: np.dot(alphas, y_matrix), 'jac': lambda alphas: y_matrix})
+bounds= Bounds(np.zeros(M), np.full(M, C))
 
-optimal_params = optimize.minimize(fun=dual_function, args=(x_matrix, y_matrix), x0=alphas, method="SLSQP", constraints=constraints)
-print(optimal_params.x)
+print("Training model...")
+optimal_alphas = optimize.minimize(fun=dual_function, args=(x_matrix, y_matrix, XXYY), x0=alphas, method="SLSQP", constraints=constraints, bounds=bounds)
+w_0 = recover_weight_vector(optimal_alphas.x, x_matrix, y_matrix, M, N)
+b = recover_b(optimal_alphas.x, x_matrix, y_matrix, w_0, C)
+w = np.append(w_0, b)
 
-# dat = np.array([[0, 3], [-1, 0], [1, 2], [2, 1], [3,3], [0, 0], [-1, -1], [-3, 1], [3, 1]])
-# print(dat[2, :])
+print("Testing model on testing data...")
+errors = 0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[i]
+    x_vector = get_x_vector_at(i, test_df)
+    actual = row.get("y")
+    guess = predict(w, x_vector) 
+    if guess != actual:
+        errors += 1
 
-# l = [1, 2, 3]
-# l = l+[4, 5]
-# print(l)
+print(f"TOTAL MISCLASSIFIED: {errors}")
+print(f"---TEST ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
 
-# constraints = ({'type': 'eq', 'fun': lambda alphas: np.dot(alphas, y_matrix), 'jac': lambda a: y_matrix},{'type': 'ineq', 'fun': lambda alphas: b - np.dot(A, a), 'jac': lambda a: -A})
+print("Testing model on training data...")
+errors = 0
+for i in range(len(df.index)):
+    row = df.iloc[i]
+    x_vector = get_x_vector_at(i, df)
+    actual = row.get("y")
+    guess = predict(w, x_vector) 
+    if guess != actual:
+        errors += 1
 
-# print("Testing model on testing data...")
-# errors = 0
-# for i in range(len(test_df.index)):
-#     row = test_df.iloc[i]
-#     x_vector = get_x_vector_at(i, test_df)
-#     actual = row.get("y")
-#     guess = predict(w, x_vector) 
-#     if guess != actual:
-#         errors += 1
+print(f"TOTAL MISCLASSIFIED: {errors}")
+print(f"---TRAIN ACCURACY: {((float(len(df.index)) - errors) / float(len(df.index))) * 100}%")
+print(f"***MODEL PARAMETERS: {w}")
 
-# print(f"TOTAL MISCLASSIFIED: {errors}")
-# print(f"---TEST ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
 
-# print("Testing model on training data...")
-# errors = 0
-# for i in range(len(df.index)):
-#     row = df.iloc[i]
-#     x_vector = get_x_vector_at(i, df)
-#     actual = row.get("y")
-#     guess = predict(w, x_vector) 
-#     if guess != actual:
-#         errors += 1
-
-# print(f"TOTAL MISCLASSIFIED: {errors}")
-# print(f"---TRAIN ACCURACY: {((float(len(df.index)) - errors) / float(len(df.index))) * 100}%")
-# print(f"***MODEL PARAMETERS: {w}")
