@@ -27,9 +27,12 @@ ONE = 1
 TWO = 2
 THREE = 3
 numFeatures = len(attributes) - 1
-num_of_zs_at_layer_2 = 3#5
-num_of_zs_at_layer_1 = 3#5
-num_of_xs_at_layer_0 = 3#numFeatures + 1
+num_of_zs_at_layer_2 = 5
+num_of_zs_at_layer_1 = 5
+num_of_xs_at_layer_0 = numFeatures + 1
+# num_of_zs_at_layer_2 = 3
+# num_of_zs_at_layer_1 = 3
+# num_of_xs_at_layer_0 = 3
 weights_dict = {}
 z_dict = {}
 
@@ -58,12 +61,12 @@ def initialize_weights():
     for i in range(num_of_zs_at_layer_2):
         weights_dict[w(i, ONE, THREE)] = np.random.normal(0, 1)
     # layer 2
-    for n in range(num_of_zs_at_layer_2):
-        for m in range(1, num_of_zs_at_layer_1):
+    for n in range(1, num_of_zs_at_layer_2):
+        for m in range(num_of_zs_at_layer_1):
             weights_dict[w(m, n, TWO)] = np.random.normal(0, 1)
     # layer 1
-    for n in range(num_of_zs_at_layer_1):
-        for m in range(1, num_of_xs_at_layer_0):
+    for n in range(1, num_of_zs_at_layer_1):
+        for m in range(num_of_xs_at_layer_0):
             weights_dict[w(m, n, ONE)] = np.random.normal(0, 1)
 
 def w(start, to, layer):
@@ -108,7 +111,7 @@ def get_layer_2_partials(y, y_star):
         s = get_s_for_given_layer2_z(n)
         sig_partial = sigmoid_partial(s)
         for m in range(num_of_zs_at_layer_1):
-            grad_weights_layer_2[w(m, ONE, TWO)] = L_partial * weights_dict[w(n, ONE, THREE)] * sig_partial * z_dict[z(m, ONE)]
+            grad_weights_layer_2[w(m, n, TWO)] = L_partial * weights_dict[w(n, ONE, THREE)] * sig_partial * z_dict[z(m, ONE)]
     return grad_weights_layer_2
 
 def get_layer_1_partials(y, y_star, x_input):
@@ -120,8 +123,8 @@ def get_layer_1_partials(y, y_star, x_input):
             s = get_s_for_given_layer2_z(p)
             sig_partial = sigmoid_partial(s)
             path_sum += (L_partial * weights_dict[w(p, ONE, THREE)] * sig_partial * weights_dict[w(n, p, TWO)])
-        outside_s = get_s_for_given_layer1_z(n)
-        term_outside_bracket = sig_partial(outside_s)
+        outside_s = get_s_for_given_layer1_z(n, x_input)
+        term_outside_bracket = sigmoid_partial(outside_s)
         for m in range(len(x_input)):
             grad_weights_layer_1[w(m, n, ONE)] = path_sum * term_outside_bracket * x_input[0]
     return grad_weights_layer_1
@@ -145,10 +148,10 @@ def forward_pass(x_input):
         y_output += (weights_dict[w(i, ONE, THREE)] * z_dict[z(i, TWO)])
     return y_output
 
-def back_propagation(y, y_star):
+def back_propagation(y, y_star, x_input):
     w_layer_3_partials = get_layer_3_partials(y, y_star)
     w_layer_2_partials = get_layer_2_partials(y, y_star)
-    w_layer_1_partials = get_layer_1_partials(y, y_star)
+    w_layer_1_partials = get_layer_1_partials(y, y_star, x_input)
     return (w_layer_1_partials, w_layer_2_partials, w_layer_3_partials)
 
 def update_weights(r, w_partials_tuple):
@@ -159,12 +162,12 @@ def update_weights(r, w_partials_tuple):
     for i in range(num_of_zs_at_layer_2):
         weights_dict[w(i, ONE, THREE)] -= r * w_layer_3_partials[w(i, ONE, THREE)]
     # layer 2
-    for n in range(num_of_zs_at_layer_2):
-        for m in range(1, num_of_zs_at_layer_1):
+    for n in range(1, num_of_zs_at_layer_2):
+        for m in range(num_of_zs_at_layer_1):
             weights_dict[w(m, n, TWO)] -= r * w_layer_2_partials[w(m, n, TWO)]
     # layer 1
-    for n in range(num_of_zs_at_layer_1):
-        for m in range(1, num_of_xs_at_layer_0):
+    for n in range(1, num_of_zs_at_layer_1):
+        for m in range(num_of_xs_at_layer_0):
             weights_dict[w(m, n, ONE)] -= r * w_layer_1_partials[w(m, n, ONE)]
 
 
@@ -178,15 +181,20 @@ def update_weights(r, w_partials_tuple):
 # print(x_vector)
 # print(actual)
 
-initialize_weights()
+#initialize_weights()
 
 # print(f"Epochs: {T}")
 # print(f"Learning rate = {r}")
 # print("Training model...")
 
-T = 3
+#gradient = back_propagation()
+
+T = 15
 r = 0.005
 d= 0.5
+print(f"Epochs: {T}")
+print(f"Learning rate = {r}")
+print("Training model...")
 for t in range(T):
     df = df.sample(frac=1)
     r = r / float(1 + (r * t) / float(d))
@@ -197,7 +205,22 @@ for t in range(T):
         y_star = row.get("y")
         prediction = forward_pass(x_input)
         if y_star != sgn(prediction):
-            gradient_of_loss = back_propagation(y=prediction, y_star=y_star)
+            gradient_of_loss = back_propagation(y=prediction, y_star=y_star, x_input=x_input)
             update_weights(r, gradient_of_loss)
+
+           
+print("Testing model on testing data...")
+errors = 0
+for i in range(len(test_df.index)):
+    row = test_df.iloc[i]
+    x_vector = get_x_vector_at(i, test_df)
+    x_input = np.insert(x_vector, 0, 1)[:-1]
+    actual = row.get("y")
+    prediction = forward_pass(x_input) 
+    if y_star != sgn(prediction):
+        errors += 1
+
+print(f"TOTAL MISCLASSIFIED: {errors}")
+print(f"---TEST ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
 
 
