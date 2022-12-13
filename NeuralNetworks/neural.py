@@ -27,8 +27,8 @@ ONE = 1
 TWO = 2
 THREE = 3
 numFeatures = len(attributes) - 1
-num_of_zs_at_layer_2 = 5
-num_of_zs_at_layer_1 = 5
+num_of_zs_at_layer_2 = 30
+num_of_zs_at_layer_1 = 30
 num_of_xs_at_layer_0 = numFeatures + 1
 # num_of_zs_at_layer_2 = 3
 # num_of_zs_at_layer_1 = 3
@@ -189,7 +189,9 @@ def update_weights(r, w_partials_tuple):
 
 #gradient = back_propagation()
 
-T = 15
+initialize_weights()
+
+T = 10
 r = 0.005
 d= 0.5
 print(f"Epochs: {T}")
