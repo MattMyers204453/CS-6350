@@ -17,18 +17,18 @@ def get_x_vector_at(i, df):
     row_as_matrix = np.array(row_as_list)
     return row_as_matrix
 
-def sgn(v):
-    if v > 0:
+def round(v):
+    if v >= 0.5:
         return 1
-    return -1
+    return 0
 ##############################################
 
 ONE = 1
 TWO = 2
 THREE = 3
 numFeatures = len(attributes) - 1
-num_of_zs_at_layer_2 = 30
-num_of_zs_at_layer_1 = 30
+num_of_zs_at_layer_2 = 5
+num_of_zs_at_layer_1 = 5
 num_of_xs_at_layer_0 = numFeatures + 1
 # num_of_zs_at_layer_2 = 3
 # num_of_zs_at_layer_1 = 3
@@ -79,6 +79,10 @@ def loss_partial(y, y_star):
     return y - y_star
 
 def sigmoid(x):
+    if (x > 24):
+        return 1
+    if (x < -24):
+        return 0
     return 1.0 / (1.0 + math.exp(-1 * x))
 
 def sigmoid_partial(s):
@@ -170,33 +174,34 @@ def update_weights(r, w_partials_tuple):
         for m in range(num_of_xs_at_layer_0):
             weights_dict[w(m, n, ONE)] -= r * w_layer_1_partials[w(m, n, ONE)]
 
+def norm_gradient(w_partials_tuple):
+    w_layer_3_partial_values = list(w_partials_tuple[2].values())
+    w_layer_2_partials_values = list(w_partials_tuple[1].values())
+    w_layer_1_partials_values = list(w_partials_tuple[0].values())
+    w_partial_values = np.asarray(w_layer_3_partial_values + w_layer_2_partials_values + w_layer_1_partials_values)
+    return np.linalg.norm(w_partial_values)
+
 
 ##############################################################################################################################
-#x_input_paper_problem = [1, 1, 1, 1]
 
-# row = df.iloc[0]
-# x_vector = get_x_vector_at(0, df)
-# x_vector = np.insert(x_vector, 0, 1)[:-1]
-# actual = row.get("y")
-# print(x_vector)
-# print(actual)
 
-#initialize_weights()
-
-# print(f"Epochs: {T}")
-# print(f"Learning rate = {r}")
-# print("Training model...")
-
-#gradient = back_propagation()
+# x_input_paper_problem = [1, 1, 1]
+# initialize_weights_paper_problem()
+# y = forward_pass(x_input_paper_problem)
+# gradient = back_propagation(y, 1, x_input_paper_problem)
 
 initialize_weights()
 
-T = 10
-r = 0.005
-d= 0.5
+# N = len(df.index)
+T = 25
+r = 0.5
+d= 0.3
 print(f"Epochs: {T}")
 print(f"Learning rate = {r}")
+print(f"Width: {num_of_zs_at_layer_1}")
 print("Training model...")
+# last_gradient_norm = 10000
+# stop_early = False
 for t in range(T):
     df = df.sample(frac=1)
     r = r / float(1 + (r * t) / float(d))
@@ -206,9 +211,21 @@ for t in range(T):
         x_input = np.insert(x_i, 0, 1)[:-1]
         y_star = row.get("y")
         prediction = forward_pass(x_input)
-        if y_star != sgn(prediction):
+        if y_star != round(prediction):
             gradient_of_loss = back_propagation(y=prediction, y_star=y_star, x_input=x_input)
             update_weights(r, gradient_of_loss)
+    #         gradient_of_loss_norm = norm_gradient(gradient_of_loss)
+    #         diff = abs(gradient_of_loss_norm - last_gradient_norm)
+    #         last_gradient_norm = gradient_of_loss_norm
+    #         if i % 50 == 0:
+    #             print(gradient_of_loss_norm)
+    #         if diff < 0.00001:
+    #             print(diff)
+    #             stop_early = True
+    #             break
+    # if stop_early:
+    #     break
+        
 
            
 print("Testing model on testing data...")
@@ -219,10 +236,24 @@ for i in range(len(test_df.index)):
     x_input = np.insert(x_vector, 0, 1)[:-1]
     actual = row.get("y")
     prediction = forward_pass(x_input) 
-    if y_star != sgn(prediction):
+    if actual != round(prediction):
         errors += 1
 
 print(f"TOTAL MISCLASSIFIED: {errors}")
 print(f"---TEST ACCURACY: {((float(len(test_df.index)) - errors) / float(len(test_df.index))) * 100}%")
+
+print("Testing model on training data...")
+errors = 0
+for i in range(len(df.index)):
+    row = df.iloc[i]
+    x_vector = get_x_vector_at(i, df)
+    x_input = np.insert(x_vector, 0, 1)[:-1]
+    actual = row.get("y")
+    prediction = forward_pass(x_input) 
+    if actual != round(prediction):
+        errors += 1
+
+print(f"TOTAL MISCLASSIFIED: {errors}")
+print(f"---TRAIN ACCURACY: {((float(len(df.index)) - errors) / float(len(df.index))) * 100}%")
 
 

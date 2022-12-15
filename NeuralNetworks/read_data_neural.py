@@ -22,6 +22,6 @@ def read_data_into_dataframe(file_name, attributes, how_many):
     df['kurtosis'] = df['kurtosis'].astype('double')
     df['entropy'] = df['entropy'].astype('double')
     df['y'] = df['y'].astype('int')
-    map = {1: 1, 0: -1}
-    df["y"] = df["y"].map(map)
+    #map = {1: 1, 0: -1}
+    #df["y"] = df["y"].map(map)
     return df
