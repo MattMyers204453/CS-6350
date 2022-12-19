@@ -9,7 +9,7 @@ from scipy.optimize import Bounds
 import math
 	
 attributes = ["variance", "skewness", "kurtosis", "entropy", "y"]
-df = read.read_data_into_dataframe("bank-note/train.csv", attributes, 10000)
+df = read.read_data_into_dataframe("bank-note/train.csv", attributes, 1000)
 test_df = read.read_data_into_dataframe("bank-note/test.csv", attributes, 10000)
 #sys.displayhook(df)
 
@@ -88,13 +88,13 @@ x_matrix = df[["variance", "skewness", "kurtosis", "entropy"]].to_numpy()
 y_matrix = df["y"].to_numpy()
 M, N = x_matrix.shape
 alphas = [0] * (len(x_matrix))
-#C = 100.0 / 872.0
+C = 100.0 / 872.0
 #C = 500.0 / 872.0
 #C = 700.0 / 872.0
-C = 1.1
+#C = 1.1
 
-# XXYY = compute_element_wise_product()
-XXYY = compute_element_wise_product_kernel()
+XXYY = compute_element_wise_product()
+# XXYY = compute_element_wise_product_kernel()
 constraints = ({'type': 'eq', 'fun': lambda alphas: np.dot(alphas, y_matrix), 'jac': lambda alphas: y_matrix})
 bounds= Bounds(np.zeros(M), np.full(M, C))
 

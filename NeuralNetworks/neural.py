@@ -193,7 +193,7 @@ def norm_gradient(w_partials_tuple):
 initialize_weights()
 
 # N = len(df.index)
-T = 25
+T = 5
 r = 0.5
 d= 0.3
 print(f"Epochs: {T}")
