@@ -52,6 +52,8 @@ def preprocess_dataframe_SVM(df, attributes, attribute_values, test):
     if not test:
         map = {1: 1, 0: -1}
         df["income>50K"] = df["income>50K"].astype("int").map(map)
+        label_column_to_move = df.pop("income>50K")
+        df.insert(len(df.columns), "income>50K", label_column_to_move)
 
 
 
@@ -210,9 +212,6 @@ print(f"---TRAIN ACCURACY: {((float(len(df.index)) - errors) / float(len(df.inde
 #print(f"***MODEL PARAMETERS: {w}")
 ##################
 
-
-#test_df = read_data_into_dataframe_ID3("test_final.csv", attributes[:-1], continuous_attributes, True, 100)
-#sys.displayhook(test_df)
 
 print("Reading test data...")
 test_df = read_data_into_dataframe_SVM(TEST_PATH, attributes[:-1], True, 10)

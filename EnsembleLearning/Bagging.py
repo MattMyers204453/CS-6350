@@ -38,7 +38,7 @@ attribute_values["y"] = [-1, 1]
 
 ### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
 print("Reading data...")
-df = read.read_data_into_dataframe("train.csv", attributes, 100000)
+df = read.read_data_into_dataframe("train.csv", attributes, 3000)
 df = read.convert_dataframe(df)
 # sys.displayhook(df)
 
@@ -49,8 +49,9 @@ test_df = read.convert_dataframe(test_df)
 def get_sample(df, size):
     df_random = df[0:0]
     for i in range(size):
-        random_row = df.sample()
+        random_row = df.sample(n=1)
         df_random = p.concat([df_random, random_row], ignore_index=True)
+    df
     return df_random
 
 def test_then_get_alpha(tree, df):
@@ -68,19 +69,19 @@ def test_then_get_alpha(tree, df):
     alpha = (1 / 2) * math.log((1 - error) / error)
     return alpha
 
-def bagging_train(df, t, sample_length):
-    alphas = [1] * t
-    trees = [None] * t
-    #m = len(df.index)
-    for i in range(t):
-        os.system('cls')
-        print(f"ROUND: {i}")
-        df_sample = get_sample(df, sample_length)
-        root = ID3(df_sample, attributes, attribute_values, labels)
-        trees[i] = root
-        # alpha = test_then_get_alpha(root, df_sample)
-        # alphas[i] = alpha
-    return (trees, alphas)
+# def bagging_train(df, t, sample_length):
+#     alphas = [1] * t
+#     trees = [None] * t
+#     #m = len(df.index)
+#     for i in range(t):
+#         os.system('cls')
+#         print(f"ROUND: {i}")
+#         df_sample = get_sample(df, sample_length)
+#         root = ID3(df_sample, attributes, attribute_values, labels)
+#         trees[i] = root
+#         # alpha = test_then_get_alpha(root, df_sample)
+#         # alphas[i] = alpha
+#     return (trees, alphas)
 
 def bagging_train(df_sample, trees, i):
     trees[i] = i * 10
@@ -104,14 +105,21 @@ def get_average_prediction(row, trained_model, attribute_values):
 
 def test_bagging(test_df, trained_model):
     error_count = 0
+    pos_count = 0
+    neg_count = 0
     for i in range(len(test_df.index)):
         row = test_df.iloc[i]
         actual_label = row.get("y")
         result_label = get_average_prediction(row, trained_model, attribute_values)
+        if result_label == 1:
+            pos_count +=1 
+        else:
+            neg_count += 1
         if (actual_label != result_label):
             error_count += 1
     print("Total Errors: ", str(error_count))
     print("Accuracy: ", (float(len(test_df.index)) - float(error_count)) / float(len(test_df.index)))
+    print(f"POS: {pos_count}  NEG: {neg_count}")
 
 ### TEST ###
 from threading import Thread
@@ -136,12 +144,10 @@ def get_trained_model_threading(df, T, sample_length):
         print(f"{k} {round_str} finished...") if k == 1 else print(f"{k} {round_str_plural} finished...")
         k += 1
         th.join()
-        
-
     return (trees, [1] * T)
 
-T = int(sys.argv[1])
-sample_size = int(sys.argv[2])
+T = int(sys.argv[1]) if len(sys.argv) == 3 else 20
+sample_size = int(sys.argv[2]) if len(sys.argv) == 3 else 400
 print(f"T = {T}")
 print(f"Sample Size = {sample_size}")
 model_bagging = get_trained_model_threading(df, T, sample_size)

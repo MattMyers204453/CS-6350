@@ -227,14 +227,14 @@ def get_sample(df, size):
 #--------MAIN ---------------------------------------------------------------------------------------------------------------#
 ### Read train.csv and convert into dataframe. Convert numerical column values from strings to ints. Convert numerical data to boolean data ###
 print("Reading data...")
-df = read.read_data_into_dataframe("train.csv", attributes, 500)
+df = read.read_data_into_dataframe("train.csv", attributes, 3000)
 df = read.convert_dataframe(df)
 
 test_df = read.read_data_into_dataframe("test.csv", attributes, 100000)
 test_df = read.convert_dataframe(test_df)
 
-T = int(sys.argv[1])
-training_sample_size = int(sys.argv[2])
+T = int(sys.argv[1]) if len(sys.argv) == 3 else 20
+training_sample_size = int(sys.argv[2]) if len(sys.argv) == 3 else 20
 print(f"T = {T}")
 print(f"Training Sample Size = {training_sample_size}")
 df = get_sample(df, training_sample_size)
